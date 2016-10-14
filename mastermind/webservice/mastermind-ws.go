@@ -18,13 +18,16 @@ type Check struct {
 	Codes  []int `json:"codes"`
 }
 
-var ticketBoardMap = make(map[string]*BoardTicket)
+var ticketBoardMap = map[string]*BoardTicket{}
 
 func main() {
-	iris.Post("/create", create)
-	iris.Post("/check", check)
-	iris.Get("/tickets", tickets)
-	iris.Get("/show/:ticket", show)
+	iris.Config.IsDevelopment = true // this will reload the templates on each request
+
+	iris.StaticServe("../web", "/web")
+	iris.Post("/api/create", create)
+	iris.Post("/api/check", check)
+	iris.Get("/api/tickets", tickets)
+	iris.Get("/api/show/:ticket", show)
 
 	iris.Listen(":8080")
 }
@@ -67,7 +70,11 @@ func check(ctx *iris.Context) {
 
 	if bTicket, ok := ticketBoardMap[check.Ticket]; ok {
 		bResponse := bTicket.Board.Check(check.Codes)
-		ctx.JSON(iris.StatusOK, bResponse)
+		if bResponse.Error != nil {
+			ctx.JSON(iris.StatusInternalServerError, bResponse)
+		} else {
+			ctx.JSON(iris.StatusOK, bResponse)
+		}
 	} else {
 		ctx.JSON(iris.StatusInternalServerError, "ticket not found")
 	}
